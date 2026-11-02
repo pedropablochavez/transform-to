@@ -5,8 +5,9 @@ using Microsoft.Win32;
 namespace TransformTo;
 
 /// <summary>
-/// Adds/removes the "Transform to" cascading menu in Explorer. Everything goes under HKEY_CURRENT_USER, so no admin
-/// rights are needed. Layout per input extension:
+/// Adds/removes "Transform to" in Explorer. On Windows 11 builds that carry the shell extension it goes in the main
+/// menu (see <see cref="ModernMenu"/>). Otherwise it's a classic cascading menu under HKEY_CURRENT_USER, which needs
+/// no admin rights and shows under "Show more options" on Windows 11. Classic layout per input extension:
 ///   HKCU\Software\Classes\SystemFileAssociations\.jpg\shell\TransformTo        (MUIVerb, SubCommands="")
 ///   HKCU\Software\Classes\SystemFileAssociations\.jpg\shell\TransformTo\shell\01_png\command
 /// </summary>
@@ -32,14 +33,35 @@ static class Installer
     static bool RunningFromInstallDir =>
         string.Equals(Path.GetFullPath(Environment.ProcessPath!), Path.GetFullPath(InstalledExe), StringComparison.OrdinalIgnoreCase);
 
-    public static void Install()
+    /// <summary>Installs and returns a sentence telling the user where to find the menu.</summary>
+    public static string Install()
     {
         Directory.CreateDirectory(InstallDir);
         if (!RunningFromInstallDir)
             File.Copy(Environment.ProcessPath!, InstalledExe, overwrite: true);
 
         RemoveMenus();
-        var exe = InstalledExe;
+        string result;
+        var modernError = ModernMenu.IsAvailable ? ModernMenu.Install(InstallDir) : "";
+        if (modernError == null)
+        {
+            result = "Right-click a file and choose \"Transform to\".";
+        }
+        else
+        {
+            AddClassicMenus(InstalledExe);
+            result = Environment.OSVersion.Version.Build >= 22000
+                ? "Right-click a file › \"Show more options\" › \"Transform to\"." + (modernError.Length > 0 ? "\n\n" + modernError : "")
+                : "Right-click a file and choose \"Transform to\".";
+        }
+
+        WriteUninstallEntry(InstalledExe);
+        NotifyShell();
+        return result;
+    }
+
+    static void AddClassicMenus(string exe)
+    {
         foreach (var ext in Formats.Inputs.Keys)
         {
             using var verb = Registry.CurrentUser.CreateSubKey($@"Software\Classes\SystemFileAssociations\.{ext}\shell\{VerbKey}");
@@ -59,7 +81,10 @@ static class Installer
                 command.SetValue("", $"\"{exe}\" convert --to {target.Id} \"%1\"");
             }
         }
+    }
 
+    static void WriteUninstallEntry(string exe)
+    {
         using (var uninstall = Registry.CurrentUser.CreateSubKey(UninstallKey))
         {
             var version = typeof(Installer).Assembly.GetName().Version!;
@@ -75,13 +100,13 @@ static class Installer
             uninstall.SetValue("NoRepair", 1, RegistryValueKind.DWord);
             uninstall.SetValue("EstimatedSize", (int)(new FileInfo(exe).Length / 1024), RegistryValueKind.DWord);
         }
-
-        NotifyShell();
     }
 
     public static void Uninstall()
     {
         RemoveMenus();
+        if (Environment.OSVersion.Version.Build >= 22000)
+            ModernMenu.Uninstall();
         Registry.CurrentUser.DeleteSubKeyTree(UninstallKey, throwOnMissingSubKey: false);
         NotifyShell();
 

@@ -25,14 +25,16 @@ static class Program
             case "uninstall":
                 try
                 {
+                    string message;
                     if (args[0].Equals("install", StringComparison.OrdinalIgnoreCase))
-                        Installer.Install();
+                        message = "Transform To is installed. " + Installer.Install();
                     else
+                    {
                         Installer.Uninstall();
+                        message = "Transform To was removed.";
+                    }
                     if (!quiet)
-                        MessageBox.Show(args[0].Equals("install", StringComparison.OrdinalIgnoreCase)
-                            ? "Transform To is installed. Right-click a file and choose \"Transform to\"."
-                            : "Transform To was removed.", "Transform To");
+                        MessageBox.Show(message, "Transform To");
                     return 0;
                 }
                 catch (Exception ex)
@@ -44,6 +46,18 @@ static class Program
 
             case "convert":
                 return Convert(args.Skip(1).ToList());
+
+            case "trust-cert":
+                // Started elevated by the installer (one UAC prompt) so Windows accepts the context-menu package.
+                try
+                {
+                    ModernMenu.TrustCertificate();
+                    return 0;
+                }
+                catch
+                {
+                    return 1;
+                }
 
             default:
                 MessageBox.Show(Usage, "Transform To");
@@ -61,9 +75,17 @@ static class Program
         }
         var target = args[toIndex + 1].ToLowerInvariant();
         var noUi = args.Contains("--no-ui");
-        var files = args.Where((_, i) => i != toIndex && i != toIndex + 1 && !args[i].StartsWith("--"))
-                        .Select(Path.GetFullPath)
-                        .ToList();
+        var listIndex = args.IndexOf("--list");
+        var skip = new HashSet<int> { toIndex, toIndex + 1, listIndex, listIndex + 1 };
+        var files = args.Where((a, i) => !skip.Contains(i) && !a.StartsWith("--")).ToList();
+        if (listIndex >= 0 && listIndex + 1 < args.Count)
+        {
+            // The Windows 11 menu passes the whole selection in a temp file (command lines max out at 32K chars).
+            var listFile = args[listIndex + 1];
+            files.AddRange(File.ReadAllLines(listFile).Where(l => l.Length > 0));
+            try { File.Delete(listFile); } catch { }
+        }
+        files = files.Select(Path.GetFullPath).ToList();
         if (files.Count == 0)
             return 2;
 

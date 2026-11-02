@@ -27,7 +27,8 @@ sealed class InstallerForm : Form
             MaximumSize = new Size(420, 0),
             Text = "Adds \"Transform to\" to the right-click menu of images and Office documents, " +
                    "so you can convert one file or a whole selection to another format.\n\n" +
-                   "On Windows 11 it appears under \"Show more options\" (or Shift + right-click).",
+                   "On Windows 11, Windows asks once for permission to trust the app's certificate " +
+                   "so the menu can appear in the main right-click menu.",
         });
         layout.Controls.Add(new Panel { Height = 10 });
         layout.Controls.Add(state);
@@ -44,21 +45,29 @@ sealed class InstallerForm : Form
         layout.Controls.Add(link);
         Controls.Add(layout);
 
-        install.Click += (_, _) => Run(Installer.Install, "Installed. Right-click a file and choose \"Transform to\".");
-        uninstall.Click += (_, _) => Run(Installer.Uninstall, "Removed from the right-click menu.");
+        install.Click += (_, _) => Run(() => "Installed. " + Installer.Install());
+        uninstall.Click += (_, _) => Run(() =>
+        {
+            Installer.Uninstall();
+            return "Removed from the right-click menu.";
+        });
         UpdateState(null);
     }
 
-    void Run(Action action, string message)
+    void Run(Func<string> action)
     {
+        UseWaitCursor = true;
         try
         {
-            action();
-            UpdateState(message);
+            UpdateState(action());
         }
         catch (Exception ex)
         {
             MessageBox.Show(this, ex.Message, "Transform To", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            UseWaitCursor = false;
         }
     }
 

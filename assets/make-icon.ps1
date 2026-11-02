@@ -1,6 +1,7 @@
 # Draws the app icon and writes:
 #   assets/icon-1024.png            (source for the macOS .icns)
 #   windows/TransformTo/app.ico     (16..256 px, PNG-compressed entries)
+#   windows/ShellExtension/Assets/  (package logos)
 # Run with Windows PowerShell:  powershell -ExecutionPolicy Bypass -File assets\make-icon.ps1
 Add-Type -AssemblyName System.Drawing
 
@@ -44,6 +45,13 @@ $root = Split-Path $PSScriptRoot -Parent
 
 $big = New-IconBitmap 1024
 $big.Save((Join-Path $PSScriptRoot 'icon-1024.png'), [System.Drawing.Imaging.ImageFormat]::Png)
+
+# Logos the Windows 11 sparse package manifest requires.
+$packageAssets = Join-Path $root 'windows\ShellExtension\Assets'
+New-Item -ItemType Directory -Force $packageAssets | Out-Null
+foreach ($asset in @(@{ Name = 'Square44x44Logo.png'; Size = 44 }, @{ Name = 'Square150x150Logo.png'; Size = 150 }, @{ Name = 'StoreLogo.png'; Size = 50 })) {
+    (New-IconBitmap $asset.Size).Save((Join-Path $packageAssets $asset.Name), [System.Drawing.Imaging.ImageFormat]::Png)
+}
 
 $sizes = 16, 24, 32, 48, 64, 128, 256
 $images = foreach ($size in $sizes) { , (Get-PngBytes (New-IconBitmap $size)) }

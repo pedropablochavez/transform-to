@@ -18,6 +18,23 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
+      - name: Build Windows 11 context-menu extension
+        shell: pwsh
+        env:
+          SIGNING_PFX_BASE64: ${{ secrets.SIGNING_PFX_BASE64 }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+        run: |
+          if ($env:SIGNING_PFX_BASE64) {
+            $env:SIGNING_PFX_PATH = "$env:RUNNER_TEMP\signing.pfx"
+            [IO.File]::WriteAllBytes($env:SIGNING_PFX_PATH, [Convert]::FromBase64String($env:SIGNING_PFX_BASE64))
+          }
+          ./windows/ShellExtension/build.ps1
+          # An unsigned package can't be installed; without it the app falls back to the classic menu.
+          if (-not $env:SIGNING_PFX_BASE64) { Remove-Item build/shell/TransformTo.msix }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shell-extension
+          path: build/shell/*.dll
       - name: Publish single-file exe
         run: dotnet publish windows/TransformTo -c Release -o out
       - name: Zip

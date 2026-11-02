@@ -7,3 +7,4 @@ mac/.build/
 mac/dist/
 mac/.swiftpm/
 .DS_Store
+build/
