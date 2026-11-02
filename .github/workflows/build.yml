@@ -1,0 +1,55 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Publish single-file exe
+        run: dotnet publish windows/TransformTo -c Release -o out
+      - name: Zip
+        shell: pwsh
+        run: Compress-Archive -Path out/TransformTo.exe -DestinationPath TransformTo-windows-x64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TransformTo-windows-x64
+          path: TransformTo-windows-x64.zip
+
+  mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build app bundle
+        run: bash mac/build-app.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TransformTo-mac
+          path: mac/dist/TransformTo-mac.zip
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, mac]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            TransformTo-windows-x64.zip
+            TransformTo-mac.zip

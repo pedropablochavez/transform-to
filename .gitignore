@@ -1,0 +1,9 @@
+bin/
+obj/
+.vs/
+*.user
+windows/publish/
+mac/.build/
+mac/dist/
+mac/.swiftpm/
+.DS_Store
