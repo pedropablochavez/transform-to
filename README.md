@@ -21,10 +21,13 @@
 ## Windows
 
 1. Download `TransformTo-windows-x64.zip` from [Releases](../../releases) and unzip it.
-2. Double-click `TransformTo.exe` and press **Install**. No admin rights needed.
+2. Double-click `TransformTo.exe` and press **Install**.
 3. Right-click a file → **Transform to**.
 
-On Windows 11 the item is under **Show more options** (or hold **Shift** while right-clicking).
+On **Windows 11** "Transform to" goes straight into the main right-click menu. To get there, Windows requires the app to be a
+signed package, so the first install shows **one admin (UAC) prompt** to trust the project's self-signed certificate
+(`CN=TransformTo`, added to the computer's *Trusted People* store). If you decline, it still works under **Show more options**.
+On Windows 10 it's always in the classic menu and needs no admin rights.
 
 Uninstall from *Settings → Apps → Installed apps → Transform To*, or run `TransformTo.exe` again and press **Uninstall**.
 
@@ -59,6 +62,15 @@ On Mac, images use the system's ImageIO (outputs: JPG, PNG, HEIC, GIF, BMP, TIFF
 dotnet publish windows/TransformTo -c Release -o windows/publish
 ```
 
+That gives the classic menu. For the Windows 11 main menu, first build the shell extension (needs Visual Studio Build Tools
+with the C++ workload, and the signing `.pfx`, which is not in the repo):
+
+```
+pwsh windows/ShellExtension/build.ps1 -Pfx path\to\TransformTo.pfx -Password ...
+```
+
+CI does this automatically when the `SIGNING_PFX_BASE64` and `SIGNING_PASSWORD` repository secrets are set.
+
 **macOS** — needs Xcode (free on the App Store) or just the Command Line Tools (`xcode-select --install`). No paid Apple Developer account required:
 
 ```
@@ -69,7 +81,8 @@ Every push builds both versions on GitHub Actions; pushing a `v*` tag publishes 
 
 ## How it works
 
-- **Windows**: the installer registers a cascading "Transform to" menu under `HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\.<ext>\shell`. Explorer starts one process per selected file; the first one becomes a collector and the rest hand it their file through a named pipe, so the whole selection is converted as one batch. Images use [Magick.NET](https://github.com/dlemstra/Magick.NET) (ImageMagick); documents use Office automation or LibreOffice headless.
+- **Windows 11**: a small C++ `IExplorerCommand` handler (`windows/ShellExtension`) registered through a sparse MSIX package whose files live in the install folder. Explorer passes it the whole selection, which it hands to `TransformTo.exe` in one go.
+- **Windows 10 / fallback**: the installer registers a cascading "Transform to" menu under `HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\.<ext>\shell`. Explorer starts one process per selected file; the first one becomes a collector and the rest hand it their file through a named pipe, so the whole selection is converted as one batch. Images use [Magick.NET](https://github.com/dlemstra/Magick.NET) (ImageMagick); documents use Office automation or LibreOffice headless.
 - **macOS**: a regular app that registers a Finder service (`NSServices`); images go through ImageIO, documents through the macOS text system or LibreOffice.
 
 ## License
@@ -96,7 +109,7 @@ Every push builds both versions on GitHub Actions; pushing a `v*` tag publishes 
 
 1. Descarga `TransformTo-windows-x64.zip` desde [Releases](../../releases) y descomprímelo.
 2. Abre `TransformTo.exe` y pulsa **Install** (no necesita permisos de administrador).
-3. Clic derecho en un archivo → **Transform to**. En Windows 11 está en **Mostrar más opciones** (o Shift + clic derecho).
+3. Clic derecho en un archivo → **Transform to**. En Windows 11 aparece directo en el menú principal: la primera vez Windows pide permiso de administrador una sola vez para confiar en el certificado de la app. Si lo rechazas, igual funciona desde **Mostrar más opciones**.
 
 Los documentos se convierten con **Microsoft Office** si lo tienes; si no, con **LibreOffice** (gratis).
 
