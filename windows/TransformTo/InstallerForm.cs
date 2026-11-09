@@ -18,9 +18,15 @@ sealed class InstallerForm : Form
         StartPosition = FormStartPosition.CenterScreen;
         AutoSize = true;
         AutoSizeMode = AutoSizeMode.GrowAndShrink;
-        Padding = new Padding(18);
 
-        var layout = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, AutoSize = true, WrapContents = false };
+        var photo = new PictureBox
+        {
+            Image = Image.FromStream(typeof(InstallerForm).Assembly.GetManifestResourceStream("installer-photo.jpg")!),
+            Size = LogicalToDeviceUnits(new Size(200, 284)),
+            SizeMode = PictureBoxSizeMode.Zoom,
+            Margin = Padding.Empty,
+        };
+        var layout = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, AutoSize = true, WrapContents = false, Margin = new Padding(18) };
         layout.Controls.Add(new Label
         {
             AutoSize = true,
@@ -43,7 +49,11 @@ sealed class InstallerForm : Form
         link.LinkClicked += (_, _) =>
             Process.Start(new ProcessStartInfo("https://github.com/pedropablochavez/transform-to") { UseShellExecute = true });
         layout.Controls.Add(link);
-        Controls.Add(layout);
+
+        var root = new TableLayoutPanel { AutoSize = true, ColumnCount = 2, RowCount = 1, Margin = Padding.Empty };
+        root.Controls.Add(photo, 0, 0);
+        root.Controls.Add(layout, 1, 0);
+        Controls.Add(root);
 
         install.Click += (_, _) => Run(() => "Installed. " + Installer.Install());
         uninstall.Click += (_, _) => Run(() =>
