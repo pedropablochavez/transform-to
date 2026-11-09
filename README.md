@@ -14,7 +14,7 @@
 
 ## What it does
 
-- **Images**: JPG, PNG, WEBP, GIF, BMP, TIFF, ICO, AVIF, HEIC (iPhone photos), SVG → JPG, PNG, WEBP, GIF, BMP, TIFF, ICO, AVIF, PDF
+- **Images**: JPG, PNG, WEBP, GIF, BMP, TIFF, ICO, AVIF, HEIC (iPhone photos), NEF (Nikon RAW), SVG → JPG, PNG, WEBP, GIF, BMP, TIFF, ICO, AVIF, PDF
 - **Many images → one PDF**: "PDF (all in one file)" merges the whole selection into a single PDF
 - **Word**: DOCX, DOC, ODT, RTF → PDF, DOCX, DOC, ODT, RTF, TXT, HTML
 - **Excel**: XLSX, XLS, ODS, CSV → PDF, XLSX, XLS, ODS, CSV
@@ -101,7 +101,7 @@ Every push builds both versions on GitHub Actions; pushing a `v*` tag publishes 
 
 ### Qué convierte
 
-- **Imágenes**: JPG, PNG, WEBP, GIF, BMP, TIFF, ICO, AVIF, HEIC (fotos de iPhone), SVG → JPG, PNG, WEBP, GIF, BMP, TIFF, ICO, AVIF, PDF
+- **Imágenes**: JPG, PNG, WEBP, GIF, BMP, TIFF, ICO, AVIF, HEIC (fotos de iPhone), NEF (RAW de Nikon), SVG → JPG, PNG, WEBP, GIF, BMP, TIFF, ICO, AVIF, PDF
 - **Varias imágenes → un solo PDF** con "PDF (all in one file)"
 - **Word**: DOCX, DOC, ODT, RTF → PDF, DOCX, DOC, ODT, RTF, TXT, HTML
 - **Excel**: XLSX, XLS, ODS, CSV → PDF, XLSX, XLS, ODS, CSV

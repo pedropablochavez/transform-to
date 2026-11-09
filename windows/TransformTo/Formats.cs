@@ -56,7 +56,7 @@ static class Formats
         ["png"] = Engine.Image, ["bmp"] = Engine.Image, ["gif"] = Engine.Image,
         ["tif"] = Engine.Image, ["tiff"] = Engine.Image, ["webp"] = Engine.Image,
         ["heic"] = Engine.Image, ["heif"] = Engine.Image, ["avif"] = Engine.Image,
-        ["ico"] = Engine.Image, ["svg"] = Engine.Image,
+        ["ico"] = Engine.Image, ["svg"] = Engine.Image, ["nef"] = Engine.Image,
 
         ["docx"] = Engine.Word, ["doc"] = Engine.Word, ["odt"] = Engine.Word, ["rtf"] = Engine.Word,
         ["xlsx"] = Engine.Excel, ["xls"] = Engine.Excel, ["ods"] = Engine.Excel, ["csv"] = Engine.Excel,

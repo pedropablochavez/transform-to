@@ -57,7 +57,7 @@ final class PickerWindow: NSObject, NSWindowDelegate {
         for i in 0..<grid.numberOfColumns { grid.column(at: i).width = 132 }
 
         if formats.isEmpty {
-            status.stringValue = "These files can't be transformed. Supported: images (JPG, PNG, HEIC, WEBP, GIF, TIFF, BMP, ICO, AVIF) and Office documents."
+            status.stringValue = "These files can't be transformed. Supported: images (JPG, PNG, HEIC, WEBP, GIF, TIFF, BMP, ICO, AVIF, NEF) and Office documents."
         }
         progress.isIndeterminate = false
         progress.minValue = 0
