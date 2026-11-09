@@ -53,7 +53,7 @@ enum Formats {
     static let inputs: [String: Engine] = [
         "jpg": .image, "jpeg": .image, "jfif": .image, "png": .image, "bmp": .image, "gif": .image,
         "tif": .image, "tiff": .image, "webp": .image, "heic": .image, "heif": .image, "avif": .image,
-        "ico": .image,
+        "ico": .image, "nef": .image,
         "docx": .document, "doc": .document, "odt": .document, "rtf": .document,
         "xlsx": .spreadsheet, "xls": .spreadsheet, "ods": .spreadsheet, "csv": .spreadsheet,
         "pptx": .presentation, "ppt": .presentation, "odp": .presentation,

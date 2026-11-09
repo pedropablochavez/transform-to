@@ -1,4 +1,5 @@
 using ImageMagick;
+using ImageMagick.Formats;
 
 namespace TransformTo;
 
@@ -48,9 +49,16 @@ static class ImageConverter
     static MagickImageCollection Read(string input)
     {
         var settings = new MagickReadSettings();
-        if (Formats.ExtensionOf(input) == "svg")
+        var ext = Formats.ExtensionOf(input);
+        if (ext == "svg")
             settings.Density = new Density(192); // render vectors at 2x instead of a blurry 96 dpi
-        return new MagickImageCollection(input, settings);
+        else if (ext == "nef")
+            settings.Defines = new DngReadDefines { UseCameraWhiteBalance = true }; // match what the photographer saw
+        var frames = new MagickImageCollection(input, settings);
+        if (ext == "nef")
+            foreach (var frame in frames)
+                frame.Depth = 8; // RAW reports 16 bits but this Q8 build holds 8; don't write files twice the size for nothing
+        return frames;
     }
 
     static void Prepare(IMagickImage<byte> image, string ext)
