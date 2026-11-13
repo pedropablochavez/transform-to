@@ -1,7 +1,6 @@
 import CoreGraphics
 import Foundation
 import ImageIO
-import WebKit
 import XCTest
 @testable import TransformTo
 
@@ -53,25 +52,6 @@ final class OfficePDFTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: pdf.path))
     }
 
-    /// Records whether WebKit on macOS can display Office files itself (it can on iOS). Informational only.
-    func testProbeWebKit() throws {
-        guard let file = try fixtures.first(where: { $0.pathExtension == "pptx" }) else { return }
-        let webView = WKWebView(frame: CGRect(x: 0, y: 0, width: 800, height: 600))
-        let probe = NavigationProbe()
-        webView.navigationDelegate = probe
-        let loaded = expectation(description: "load")
-        probe.done = { loaded.fulfill() }
-        webView.loadFileURL(file, allowingReadAccessTo: file.deletingLastPathComponent())
-        wait(for: [loaded], timeout: 30)
-        let evaluated = expectation(description: "js")
-        webView.evaluateJavaScript("document.body ? document.body.innerText.length + ' chars: ' + document.body.innerText.slice(0, 80) : 'no body'") { result, error in
-            probe.log.append("body: \(result ?? "nil") \(error.map { "\($0)" } ?? "")")
-            evaluated.fulfill()
-        }
-        wait(for: [evaluated], timeout: 10)
-        print("WEBKIT PROBE: \(probe.log.joined(separator: " | "))")
-    }
-
     private func savePNG(_ page: CGPDFPage, to url: URL) {
         let box = page.getBoxRect(.mediaBox)
         let scale: CGFloat = 1.5
@@ -88,36 +68,5 @@ final class OfficePDFTests: XCTestCase {
               let destination = CGImageDestinationCreateWithURL(url as CFURL, "public.png" as CFString, 1, nil) else { return }
         CGImageDestinationAddImage(destination, image, nil)
         CGImageDestinationFinalize(destination)
-    }
-}
-
-@MainActor
-private final class NavigationProbe: NSObject, WKNavigationDelegate {
-    var log: [String] = []
-    var done: (() -> Void)?
-
-    func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse) async -> WKNavigationResponsePolicy {
-        log.append("mime=\(navigationResponse.response.mimeType ?? "?") canShow=\(navigationResponse.canShowMIMEType)")
-        return .allow
-    }
-
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        log.append("finished")
-        finish()
-    }
-
-    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        log.append("failed: \(error.localizedDescription)")
-        finish()
-    }
-
-    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        log.append("failed provisional: \(error.localizedDescription)")
-        finish()
-    }
-
-    private func finish() {
-        done?()
-        done = nil
     }
 }

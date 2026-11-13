@@ -296,7 +296,12 @@ final class SpreadsheetPDF {
         for r in autoHeightRows {
             var needed = sheet.defaultRowHeight
             for c in sheet.columnsInRow[r] ?? [] {
-                guard let cell = sheet.cells[Key(row: r, col: c)], !cell.text.isEmpty, sheet.mergedCells[Key(row: r, col: c)] == nil else { continue }
+                guard let cell = sheet.cells[Key(row: r, col: c)], !cell.text.isEmpty else { continue }
+                // Merged cells count only when the merge is a single row (like a title across the columns).
+                if let index = sheet.mergedCells[Key(row: r, col: c)] {
+                    let m = sheet.merges[index]
+                    guard m.top == r, m.bottom == r, m.left == c else { continue }
+                }
                 let style = self.style(cell.style)
                 let text = attributed(cell.text, style, alignment: .left, wraps: style.wrap)
                 if style.wrap {
@@ -434,7 +439,7 @@ final class SpreadsheetPDF {
                 let left = sheet.centered ? (paper.width - bandWidth) / 2 : sheet.margins.l
                 cg.translateBy(x: left, y: sheet.margins.t)
                 cg.scaleBy(x: scale, y: scale)
-                self.drawPage(sheet, rows, cols, widths, heights, cg)
+                self.drawPage(sheet, rows, cols, widths, heights, textWidth: printable.width / scale, cg)
             }
             pages += 1
         }
@@ -467,7 +472,7 @@ final class SpreadsheetPDF {
     }
 
     private func drawPage(_ sheet: Sheet, _ rows: ClosedRange<Int>, _ cols: ClosedRange<Int>,
-                          _ widths: [CGFloat], _ heights: [CGFloat], _ cg: CGContext) {
+                          _ widths: [CGFloat], _ heights: [CGFloat], textWidth: CGFloat, _ cg: CGContext) {
         // Positions relative to the page's first row and column (negative before it, for merges that start earlier).
         /// Total size of rows/columns `from..<to` (1-based).
         func span(_ sizes: [CGFloat], _ from: Int, _ to: Int) -> CGFloat {
@@ -511,7 +516,9 @@ final class SpreadsheetPDF {
         }
 
         cg.saveGState()
-        cg.clip(to: CGRect(x: 0, y: 0, width: pageWidth, height: pageHeight))
+        // On the last columns, text may still spill past the used range into the page's empty margin of cells.
+        let clipWidth = cols.upperBound == sheet.maxCol ? max(pageWidth, textWidth) : pageWidth
+        cg.clip(to: CGRect(x: 0, y: 0, width: clipWidth, height: pageHeight))
 
         // Gridlines, then fills over them (merged areas hide the lines inside), then borders, then text.
         cg.setStrokeColor(RGBA(r: 0.84, g: 0.84, b: 0.84).cgColor)
@@ -576,12 +583,13 @@ final class SpreadsheetPDF {
             var room = r
             if !style.wrap, cell.kind == .text, sheet.mergedCells[key] == nil {
                 func empty(_ c: Int) -> Bool {
+                    if c > sheet.maxCol { return room.maxX < clipWidth }
                     let k = Key(row: key.row, col: c)
                     return cols.contains(c) && sheet.mergedCells[k] == nil && (sheet.cells[k]?.text.isEmpty ?? true)
                 }
                 if horizontal == "general" || horizontal == "left" || horizontal == "center" {
                     var c = key.col + 1
-                    while empty(c) { room.size.width += widths[c - 1]; c += 1 }
+                    while empty(c) { room.size.width += sheet.width(c); c += 1 }
                 }
                 if horizontal == "right" || horizontal == "center" {
                     var c = key.col - 1
