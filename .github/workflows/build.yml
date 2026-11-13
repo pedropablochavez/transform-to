@@ -52,6 +52,26 @@ jobs:
         with:
           name: TransformTo-mac
           path: mac/dist/TransformTo-mac.zip
+      - name: Smoke-test PPTX/XLSX to PDF
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet python-pptx openpyxl
+          "$RUNNER_TEMP/venv/bin/python" mac/Tests/make_office_fixtures.py "$RUNNER_TEMP/fixtures"
+          cd mac
+          OFFICE_FIXTURES="$RUNNER_TEMP/fixtures" OFFICE_OUTPUT="$RUNNER_TEMP/office-pdf" swift test
+      - name: Probe Quick Look
+        continue-on-error: true
+        run: |
+          mkdir -p "$RUNNER_TEMP/ql"
+          perl -e 'alarm 60; exec @ARGV' qlmanage -p -o "$RUNNER_TEMP/ql" "$RUNNER_TEMP/fixtures/sample.pptx" "$RUNNER_TEMP/fixtures/sample.xlsx" || true
+          ls -laR "$RUNNER_TEMP/ql" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: office-pdf-previews
+          path: |
+            ${{ runner.temp }}/office-pdf
+            ${{ runner.temp }}/ql
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
