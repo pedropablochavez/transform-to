@@ -429,7 +429,8 @@ final class SpreadsheetPDF {
         var pages = 0
         for (rows, cols) in order where hasContent(sheet, rows, cols) {
             writer.page(size: paper) { cg in
-                let bandWidth = cols.reduce(CGFloat(0)) { $0 + widths[$1 - 1] } * scale
+                var bandWidth: CGFloat = 0
+                for c in cols { bandWidth += widths[c - 1] * scale }
                 let left = sheet.centered ? (paper.width - bandWidth) / 2 : sheet.margins.l
                 cg.translateBy(x: left, y: sheet.margins.t)
                 cg.scaleBy(x: scale, y: scale)
@@ -468,15 +469,21 @@ final class SpreadsheetPDF {
     private func drawPage(_ sheet: Sheet, _ rows: ClosedRange<Int>, _ cols: ClosedRange<Int>,
                           _ widths: [CGFloat], _ heights: [CGFloat], _ cg: CGContext) {
         // Positions relative to the page's first row and column (negative before it, for merges that start earlier).
+        /// Total size of rows/columns `from..<to` (1-based).
+        func span(_ sizes: [CGFloat], _ from: Int, _ to: Int) -> CGFloat {
+            var total: CGFloat = 0
+            var i = from
+            while i < to {
+                total += sizes[i - 1]
+                i += 1
+            }
+            return total
+        }
         func x(_ col: Int) -> CGFloat {
-            col >= cols.lowerBound
-                ? (cols.lowerBound..<col).reduce(0) { $0 + widths[$1 - 1] }
-                : -(col..<cols.lowerBound).reduce(0) { $0 + widths[$1 - 1] }
+            col >= cols.lowerBound ? span(widths, cols.lowerBound, col) : -span(widths, col, cols.lowerBound)
         }
         func y(_ row: Int) -> CGFloat {
-            row >= rows.lowerBound
-                ? (rows.lowerBound..<row).reduce(0) { $0 + heights[$1 - 1] }
-                : -(row..<rows.lowerBound).reduce(0) { $0 + heights[$1 - 1] }
+            row >= rows.lowerBound ? span(heights, rows.lowerBound, row) : -span(heights, row, rows.lowerBound)
         }
         var xs: [Int: CGFloat] = [:]
         var position: CGFloat = 0
@@ -496,8 +503,8 @@ final class SpreadsheetPDF {
             CGRect(x: xs[c] ?? x(c), y: ys[r] ?? y(r), width: widths[c - 1], height: heights[r - 1])
         }
         func mergeRect(_ m: Merge) -> CGRect {
-            CGRect(x: x(m.left), y: y(m.top), width: (m.left...m.right).reduce(0) { $0 + widths[$1 - 1] },
-                   height: (m.top...m.bottom).reduce(0) { $0 + heights[$1 - 1] })
+            CGRect(x: x(m.left), y: y(m.top), width: span(widths, m.left, m.right + 1),
+                   height: span(heights, m.top, m.bottom + 1))
         }
         let merges = sheet.merges.filter {
             $0.bottom >= rows.lowerBound && $0.top <= rows.upperBound && $0.right >= cols.lowerBound && $0.left <= cols.upperBound

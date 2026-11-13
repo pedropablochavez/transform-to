@@ -894,7 +894,7 @@ final class PresentationPDF {
             let marginLeft = emu(pAttr("marL")), indent = emu(pAttr("indent"))
             style.headIndent = marginLeft
             style.firstLineHeadIndent = max(0, marginLeft + indent)
-            style.tabStops = marginLeft > 0 ? [NSTextTab(textAlignment: .left, location: marginLeft)] : []
+            style.tabStops = marginLeft > 0 ? [NSTextTab(textAlignment: .left, location: marginLeft, options: [:])] : []
             style.defaultTabInterval = 72
             style.lineBreakMode = .byWordWrapping
             let firstSize = ((hasText ? result.attribute(.font, at: start, effectiveRange: nil) : nil) as? NSFont)?.pointSize
@@ -1173,7 +1173,7 @@ final class PresentationPDF {
     private static let mediumStyle2Document: XMLDocument? = {
         let white = #"<a:ln w="12700"><a:solidFill><a:schemeClr val="lt1"/></a:solidFill></a:ln>"#
         let xml = """
-            <a:tblStyle xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" styleId="\(mediumStyle2Id)">
+            <a:tblStyle xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" styleId="\(PresentationPDF.mediumStyle2Id)">
             <a:wholeTbl><a:tcTxStyle><a:schemeClr val="dk1"/></a:tcTxStyle><a:tcStyle><a:tcBdr>
             <a:left>\(white)</a:left><a:right>\(white)</a:right><a:top>\(white)</a:top><a:bottom>\(white)</a:bottom>
             <a:insideH>\(white)</a:insideH><a:insideV>\(white)</a:insideV></a:tcBdr>
