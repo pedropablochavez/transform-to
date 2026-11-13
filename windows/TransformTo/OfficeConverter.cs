@@ -4,7 +4,8 @@ using System.Runtime.InteropServices;
 namespace TransformTo;
 
 /// <summary>
-/// Converts documents with Microsoft Office (through COM) when it is installed, otherwise with LibreOffice.
+/// Converts documents with Microsoft Office (through COM) when it is installed. Without Office, PPTX/DOCX/XLSX to PDF
+/// uses the built-in converter, and everything else uses LibreOffice if it's there.
 /// One instance is opened per batch and closed at the end, so converting 50 files doesn't launch Word 50 times.
 /// Must be used from an STA thread.
 /// </summary>
@@ -12,6 +13,7 @@ sealed class OfficeConverter : IDisposable
 {
     readonly Engine engine;
     dynamic? app;
+    bool started;
     bool quitOnDispose;
     string? sofficePath;
 
@@ -20,16 +22,57 @@ sealed class OfficeConverter : IDisposable
     public void Convert(string input, string output, TargetFormat target)
     {
         EnsureStarted();
+        var inputExt = Formats.ExtensionOf(input);
+        var builtIn = BuiltInConverter.CanConvert(inputExt, target.Extension);
+
         if (app != null)
-            ConvertWithOffice(input, output, target.Extension);
-        else
-            ConvertWithLibreOffice(input, output, target.Extension);
+        {
+            try
+            {
+                ConvertWithOffice(input, output, target.Extension);
+                return;
+            }
+            // Office can be installed yet unusable (unactivated, broken repair, ...). Don't let that block a PDF.
+            catch (COMException) when (builtIn)
+            {
+                TryDelete(output);
+            }
+        }
+
+        if (builtIn)
+        {
+            try
+            {
+                BuiltInConverter.ConvertToPdf(input, output);
+                return;
+            }
+            catch when (sofficePath != null)
+            {
+                TryDelete(output);
+            }
+        }
+
+        if (sofficePath == null)
+            throw new InvalidOperationException(target.Extension == "pdf"
+                ? $"Converting a .{inputExt} file needs Microsoft Office or LibreOffice (free: https://www.libreoffice.org). " +
+                  $"Tip: .{ModernExtension()} files convert to PDF without them."
+                : $"Converting to {target.Label} needs Microsoft Office or LibreOffice (free: https://www.libreoffice.org)." +
+                  (BuiltInConverter.CanConvert(inputExt, "pdf") ? " Converting to PDF works without them." : ""));
+        ConvertWithLibreOffice(input, output, target.Extension);
     }
+
+    string ModernExtension() => engine switch
+    {
+        Engine.Word => "docx",
+        Engine.Excel => "xlsx",
+        _ => "pptx",
+    };
 
     void EnsureStarted()
     {
-        if (app != null || sofficePath != null)
+        if (started)
             return;
+        started = true;
 
         var progId = engine switch
         {
@@ -40,33 +83,48 @@ sealed class OfficeConverter : IDisposable
         var type = Type.GetTypeFromProgID(progId);
         if (type != null)
         {
-            app = Activator.CreateInstance(type)!;
-            const int msoAutomationSecurityForceDisable = 3; // never run macros from the files we open
-            app.AutomationSecurity = msoAutomationSecurityForceDisable;
-            switch (engine)
+            try
             {
-                case Engine.Word:
-                    app.Visible = false;
-                    app.DisplayAlerts = 0; // wdAlertsNone
-                    quitOnDispose = app.Documents.Count == 0;
-                    break;
-                case Engine.Excel:
-                    app.Visible = false;
-                    app.DisplayAlerts = false;
-                    quitOnDispose = app.Workbooks.Count == 0;
-                    break;
-                default:
-                    // PowerPoint is single-instance: if the user already has it open, leave it open when done.
-                    app.DisplayAlerts = 1; // ppAlertsNone
-                    quitOnDispose = app.Presentations.Count == 0;
-                    break;
+                app = Activator.CreateInstance(type)!;
+                const int msoAutomationSecurityForceDisable = 3; // never run macros from the files we open
+                app.AutomationSecurity = msoAutomationSecurityForceDisable;
+                switch (engine)
+                {
+                    case Engine.Word:
+                        app.Visible = false;
+                        app.DisplayAlerts = 0; // wdAlertsNone
+                        quitOnDispose = app.Documents.Count == 0;
+                        break;
+                    case Engine.Excel:
+                        app.Visible = false;
+                        app.DisplayAlerts = false;
+                        quitOnDispose = app.Workbooks.Count == 0;
+                        break;
+                    default:
+                        // PowerPoint is single-instance: if the user already has it open, leave it open when done.
+                        app.DisplayAlerts = 1; // ppAlertsNone
+                        quitOnDispose = app.Presentations.Count == 0;
+                        break;
+                }
+                return;
             }
-            return;
+            catch (Exception ex) when (ex is COMException or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException)
+            {
+                // Office is registered but won't start; carry on as if it weren't installed.
+                if (app != null)
+                {
+                    try { Marshal.FinalReleaseComObject(app); } catch { }
+                    app = null;
+                }
+            }
         }
 
-        sofficePath = FindLibreOffice()
-            ?? throw new InvalidOperationException(
-                "Converting documents needs Microsoft Office or LibreOffice (free: https://www.libreoffice.org).");
+        sofficePath = FindLibreOffice();
+    }
+
+    static void TryDelete(string path)
+    {
+        try { File.Delete(path); } catch { }
     }
 
     void ConvertWithOffice(string input, string output, string ext)

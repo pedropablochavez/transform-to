@@ -37,7 +37,7 @@ On Windows 10 it's always in the classic menu and needs no admin rights.
 
 Uninstall from *Settings → Apps → Installed apps → Transform To*, or run `TransformTo.exe` again and press **Uninstall**.
 
-Documents (Word/Excel/PowerPoint) are converted with **Microsoft Office** if it's installed, otherwise with **[LibreOffice](https://www.libreoffice.org)** (free). Images need nothing extra.
+**PowerPoint, Word and Excel files (.pptx, .docx, .xlsx) convert to PDF with nothing else installed.** If **Microsoft Office** is installed it's used instead, for an exact match. Other document conversions (to DOCX, ODT, PPT…, or from old .doc/.ppt/.xls and OpenDocument files) need Microsoft Office or **[LibreOffice](https://www.libreoffice.org)** (free). Images need nothing extra.
 
 <details><summary>Command line</summary>
 
@@ -86,12 +86,12 @@ Every push builds both versions on GitHub Actions; pushing a `v*` tag publishes 
 ## How it works
 
 - **Windows 11**: a small C++ `IExplorerCommand` handler (`windows/ShellExtension`) registered through a sparse MSIX package whose files live in the install folder. Explorer passes it the whole selection, which it hands to `TransformTo.exe` in one go.
-- **Windows 10 / fallback**: the installer registers a cascading "Transform to" menu under `HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\.<ext>\shell`. Explorer starts one process per selected file; the first one becomes a collector and the rest hand it their file through a named pipe, so the whole selection is converted as one batch. Images use [Magick.NET](https://github.com/dlemstra/Magick.NET) (ImageMagick); documents use Office automation or LibreOffice headless.
+- **Windows 10 / fallback**: the installer registers a cascading "Transform to" menu under `HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\.<ext>\shell`. Explorer starts one process per selected file; the first one becomes a collector and the rest hand it their file through a named pipe, so the whole selection is converted as one batch. Images use [Magick.NET](https://github.com/dlemstra/Magick.NET) (ImageMagick); documents use Office automation when available; otherwise PPTX/DOCX → PDF uses [Lokad.OoxPdf](https://github.com/Lokad/OoxPDF) and XLSX → PDF uses [MiniPdf](https://github.com/mini-software/MiniPdf) (both pure managed code), and the rest goes through LibreOffice headless.
 - **macOS**: a regular app that registers a Finder service (`NSServices`); images go through ImageIO, documents through the macOS text system or LibreOffice.
 
 ## License
 
-[MIT](LICENSE). Uses Magick.NET / ImageMagick (Apache 2.0).
+[MIT](LICENSE). Uses Magick.NET / ImageMagick (Apache 2.0), Lokad.OoxPdf (MIT) and MiniPdf (Apache 2.0).
 
 ---
 
@@ -116,7 +116,7 @@ Every push builds both versions on GitHub Actions; pushing a `v*` tag publishes 
 3. Pulsa **Install** (no necesita permisos de administrador).
 4. Clic derecho en un archivo → **Transform to**. En Windows 11 aparece directo en el menú principal: la primera vez Windows pide permiso de administrador una sola vez para confiar en el certificado de la app. Si lo rechazas, igual funciona desde **Mostrar más opciones**.
 
-Los documentos se convierten con **Microsoft Office** si lo tienes; si no, con **LibreOffice** (gratis).
+**PowerPoint, Word y Excel (.pptx, .docx, .xlsx) se convierten a PDF sin instalar nada más.** Si tienes **Microsoft Office**, se usa Office para que quede idéntico. Las demás conversiones de documentos (a DOCX, ODT, PPT…, o desde archivos antiguos .doc/.ppt/.xls y OpenDocument) necesitan Microsoft Office o **LibreOffice** (gratis).
 
 ### macOS
 

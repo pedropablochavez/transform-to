@@ -10,7 +10,7 @@
     <ApplicationIcon>app.ico</ApplicationIcon>
     <AssemblyName>TransformTo</AssemblyName>
     <Product>Transform To</Product>
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <Authors>pedropablochavez</Authors>
     <Description>Right-click any file and transform it to another format.</Description>
   </PropertyGroup>
@@ -25,7 +25,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Lokad.OoxPdf" Version="0.2.0" />
     <PackageReference Include="Magick.NET-Q8-x64" Version="15.0.0" />
+    <PackageReference Include="MiniPdf" Version="0.43.2" />
   </ItemGroup>
 
   <ItemGroup>
