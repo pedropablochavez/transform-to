@@ -1,16 +1,29 @@
 import AppKit
 
-/// Office documents: LibreOffice when it's installed (best fidelity, all formats), otherwise the text system
-/// built into macOS, which handles Word/RTF/ODT text documents but not spreadsheets or presentations.
+/// Office documents. PowerPoint and Excel files become PDFs with the built-in renderer (nothing to install);
+/// everything else goes through LibreOffice when it's installed (best fidelity, all formats), or else the text
+/// system built into macOS, which handles Word/RTF/ODT text documents.
 @MainActor
 enum DocumentConversion {
     static func convert(_ input: URL, to output: URL, ext: String, engine: Engine) async throws {
+        if ext == "pdf", OfficePDF.canConvert(input) {
+            do {
+                try OfficePDF.convert(input, to: output)
+                return
+            } catch {
+                // LibreOffice may still manage a file the built-in renderer can't read.
+                guard libreOffice != nil else { throw error }
+                try? FileManager.default.removeItem(at: output)
+            }
+        }
         if let soffice = libreOffice {
             try await convertWithLibreOffice(soffice, input, output, ext)
             return
         }
         guard engine == .document else {
-            throw ConversionError("Spreadsheets and presentations need LibreOffice (free): https://www.libreoffice.org")
+            throw ConversionError(ext == "pdf"
+                ? "Only .pptx and .xlsx files convert to PDF without LibreOffice. Install it (free) for this one: https://www.libreoffice.org"
+                : "Converting to .\(ext) needs LibreOffice (free): https://www.libreoffice.org")
         }
         try convertWithTextSystem(input, output, ext)
     }

@@ -56,7 +56,7 @@ TransformTo.exe install | uninstall [--quiet]
 3. In Finder select files, right-click → **Quick Actions** (or **Services**) → **Transform to…** and choose the format.
    If it's not there, enable it in *System Settings → Keyboard → Keyboard Shortcuts → Services → Files and Folders*.
 
-On Mac, images use the system's ImageIO (outputs: JPG, PNG, HEIC, GIF, BMP, TIFF, ICO, PDF; WEBP/AVIF can be read but not written). Word/RTF/ODT text documents work out of the box; spreadsheets and presentations need [LibreOffice](https://www.libreoffice.org).
+On Mac, images use the system's ImageIO (outputs: JPG, PNG, HEIC, GIF, BMP, TIFF, ICO, PDF; WEBP/AVIF can be read but not written). **PowerPoint and Excel files (.pptx, .xlsx) convert to PDF with nothing else installed**, and so do Word/RTF/ODT text documents. Other document conversions (to PPTX, XLSX, ODP…, or from old .ppt/.xls and OpenDocument spreadsheets and presentations) need [LibreOffice](https://www.libreoffice.org) (free).
 
 ## Building from source
 
@@ -87,7 +87,7 @@ Every push builds both versions on GitHub Actions; pushing a `v*` tag publishes 
 
 - **Windows 11**: a small C++ `IExplorerCommand` handler (`windows/ShellExtension`) registered through a sparse MSIX package whose files live in the install folder. Explorer passes it the whole selection, which it hands to `TransformTo.exe` in one go.
 - **Windows 10 / fallback**: the installer registers a cascading "Transform to" menu under `HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\.<ext>\shell`. Explorer starts one process per selected file; the first one becomes a collector and the rest hand it their file through a named pipe, so the whole selection is converted as one batch. Images use [Magick.NET](https://github.com/dlemstra/Magick.NET) (ImageMagick); documents use Office automation when available; otherwise PPTX/DOCX → PDF uses [Lokad.OoxPdf](https://github.com/Lokad/OoxPDF) and XLSX → PDF uses [MiniPdf](https://github.com/mini-software/MiniPdf) (both pure managed code), and the rest goes through LibreOffice headless.
-- **macOS**: a regular app that registers a Finder service (`NSServices`); images go through ImageIO, documents through the macOS text system or LibreOffice.
+- **macOS**: a regular app that registers a Finder service (`NSServices`); images go through ImageIO; PPTX/XLSX → PDF is drawn by the app itself (it unzips the file and renders its XML with Core Graphics and the AppKit text system, since macOS has no public API for Office files), other documents go through the macOS text system or LibreOffice.
 
 ## License
 
@@ -123,5 +123,7 @@ Every push builds both versions on GitHub Actions; pushing a `v*` tag publishes 
 1. **[Descarga TransformTo-mac.zip](https://github.com/pedropablochavez/transform-to/releases/latest/download/TransformTo-mac.zip)**, descomprímelo y arrastra **Transform To.app** a **Aplicaciones**.
 2. Ábrela una vez. Como no está notarizada por Apple, macOS la bloquea la primera vez: ve a *Ajustes del Sistema → Privacidad y seguridad* y pulsa **Abrir igualmente**.
 3. En Finder selecciona archivos → clic derecho → **Acciones rápidas** (o **Servicios**) → **Transform to…**
+
+**PowerPoint y Excel (.pptx, .xlsx) se convierten a PDF sin instalar nada más**, igual que los documentos de texto Word/RTF/ODT. Las demás conversiones de documentos (a PPTX, XLSX, ODP…, o desde archivos antiguos .ppt/.xls y hojas de cálculo o presentaciones OpenDocument) necesitan **LibreOffice** (gratis).
 
 Compilarla en un Mac es **gratis**: solo necesitas Xcode (gratis en la App Store) y correr `bash mac/build-app.sh`. La cuenta de Apple Developer de pago (99 USD/año) solo hace falta para notarizar la app y evitar el aviso de seguridad, o para publicarla en la App Store.
